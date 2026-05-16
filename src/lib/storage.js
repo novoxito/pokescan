@@ -42,18 +42,19 @@ export function removeEntry(uid) {
   write(read().filter((e) => e.uid !== uid))
 }
 
+// Totales en USD (la divisa canónica interna).
 export function collectionStats() {
   const list = read()
-  let rawTotal = 0
-  let psa10Total = 0
+  let rawTotalUsd = 0
+  let psa10TotalUsd = 0
   let cards = 0
   for (const e of list) {
     const qty = e.quantity || 1
     cards += qty
-    if (e.rawPriceEur) rawTotal += e.rawPriceEur * qty
-    if (e.psa10PriceEur) psa10Total += e.psa10PriceEur * qty
+    if (e.rawPriceUsd) rawTotalUsd += e.rawPriceUsd * qty
+    if (e.psa10PriceUsd) psa10TotalUsd += e.psa10PriceUsd * qty
   }
-  return { entries: list.length, cards, rawTotal, psa10Total }
+  return { entries: list.length, cards, rawTotalUsd, psa10TotalUsd }
 }
 
 export function getSettings() {

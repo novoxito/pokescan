@@ -106,11 +106,77 @@ function priceFromId(html, id) {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
+// Extrae el nombre del Pokémon y el número del título de PriceCharting.
+// "Charizard [Shadowless] #4" -> { pokemon: 'Charizard', number: '4' }
+function parsePcName(name = '') {
+  const pokemon = name
+    .split('#')[0]
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const numM = name.match(/#\s*([A-Za-z]*\d+[A-Za-z]*)/)
+  return { pokemon, number: numM ? numM[1] : '' }
+}
+
+function setTokens(s = '') {
+  return new Set(
+    s
+      .toLowerCase()
+      .replace(/pokemon|japanese|english/g, '')
+      .split(/[^a-z0-9]+/)
+      .filter(Boolean)
+  )
+}
+
+/**
+ * Precio de Cardmarket (mercado europeo, EUR) vía la API pública de Pokémon TCG.
+ * Cardmarket no tiene API gratuita y bloquea el scraping directo (403), pero
+ * la API de Pokémon TCG expone sus precios de Cardmarket.
+ */
+export async function getCardmarketPrice(pokemon, number, setHint = '') {
+  if (!pokemon) return null
+  const q =
+    `name:"${pokemon.replace(/["\\]/g, '')}*"` +
+    (number ? ` number:"${number}"` : '')
+  let cards = []
+  try {
+    const res = await fetch(
+      `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=20`
+    )
+    if (!res.ok) return null
+    cards = (await res.json()).data || []
+  } catch {
+    return null
+  }
+
+  const hintTokens = setTokens(setHint)
+  let best = null
+  let bestScore = -1
+  for (const c of cards) {
+    const p = c.cardmarket?.prices
+    if (!p || !(p.trendPrice || p.averageSellPrice)) continue
+    const tokens = setTokens(c.set?.name)
+    let overlap = 0
+    for (const t of tokens) if (hintTokens.has(t)) overlap++
+    if (overlap > bestScore) {
+      bestScore = overlap
+      best = {
+        trend: p.trendPrice ?? p.averageSellPrice ?? null,
+        avg30: p.avg30 ?? null,
+        low: p.lowPrice ?? null,
+        set: c.set?.name || '',
+        url: c.cardmarket?.url || '',
+      }
+    }
+  }
+  return best
+}
+
 /**
  * Precios de una carta por su product_id de PriceCharting.
- * @returns {Promise<{name,url,currency,ungraded,grade9,psa10}>}
+ * Incluye precios de PriceCharting (USD) y de Cardmarket (EUR) si se encuentran.
  */
-export async function getPrices(productId) {
+export async function getPrices(productId, hints = {}) {
   const id = String(productId).replace(/^G/, '').replace(/[^0-9]/g, '')
   if (!id) throw new Error('productId no válido')
 
@@ -122,17 +188,28 @@ export async function getPrices(productId) {
   const html = await res.text()
 
   const nameM = html.match(/id="product_name"[^>]*>([\s\S]*?)<\/h1>/i)
+  const fullName = nameM
+    ? decodeEntities(
+        nameM[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+      )
+    : null
+
+  // El nombre/número para Cardmarket: del hint del cliente o del título.
+  const { pokemon, number } = parsePcName(hints.name || fullName || '')
+  const cardmarket = await getCardmarketPrice(
+    pokemon,
+    number,
+    hints.set || fullName || ''
+  )
+
   return {
-    name: nameM
-      ? decodeEntities(
-          nameM[1].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-        )
-      : null,
+    name: fullName,
     url: res.url,
     currency: 'USD',
     ungraded: priceFromId(html, 'used_price'),
     grade9: priceFromId(html, 'graded_price'),
     psa10: priceFromId(html, 'manual_only_price'),
+    cardmarket, // { trend, avg30, low, set, url } en EUR, o null
     source: 'PriceCharting',
   }
 }

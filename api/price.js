@@ -5,10 +5,10 @@ export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Método no permitido' })
   }
-  const id = req.query.id
+  const { id, name, set } = req.query
   if (!id) return res.status(400).json({ error: 'Falta el parámetro id' })
   try {
-    res.status(200).json(await getPrices(id))
+    res.status(200).json(await getPrices(id, { name, set }))
   } catch (e) {
     res.status(502).json({ error: e.message || 'Error consultando precios' })
   }

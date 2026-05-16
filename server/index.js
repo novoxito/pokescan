@@ -72,7 +72,14 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/price' && req.method === 'GET') {
       const id = url.searchParams.get('id')
       if (!id) return send(res, 400, { error: 'Falta el parámetro id' })
-      return send(res, 200, await getPrices(id))
+      return send(
+        res,
+        200,
+        await getPrices(id, {
+          name: url.searchParams.get('name') || '',
+          set: url.searchParams.get('set') || '',
+        })
+      )
     }
 
     return send(res, 404, { error: 'Not found' })

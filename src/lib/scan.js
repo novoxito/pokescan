@@ -35,10 +35,14 @@ export async function scanCard(imgDataUrl, language = '') {
   return json.candidates || []
 }
 
-/** Precios (raw / Grade 9 / PSA 10) de una carta por su productId. */
-export async function fetchPrices(productId) {
-  const res = await fetch(
-    `${API_BASE}/api/price?id=${encodeURIComponent(productId)}`
-  )
+/**
+ * Precios de una carta: PriceCharting (raw/G9/PSA 10, USD) y Cardmarket (EUR).
+ * name y set ayudan a localizar la carta en Cardmarket.
+ */
+export async function fetchPrices(productId, name = '', set = '') {
+  const params = new URLSearchParams({ id: productId })
+  if (name) params.set('name', name)
+  if (set) params.set('set', set)
+  const res = await fetch(`${API_BASE}/api/price?${params}`)
   return asJson(res)
 }

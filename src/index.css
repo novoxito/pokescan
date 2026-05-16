@@ -549,6 +549,42 @@ body {
   color: #1a1300;
 }
 
+/* ---------- selector de divisa (cabecera) ---------- */
+.seg-currency {
+  margin-top: 12px;
+}
+
+/* ---------- encabezados de bloque de precio ---------- */
+.price-heading {
+  margin: 4px 0 -6px;
+  font-size: 13px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.links-row {
+  display: flex;
+  gap: 18px;
+}
+
+/* ---------- ordenar colección ---------- */
+.sort-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.sort-row select {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
 /* ---------- confianza de coincidencia ---------- */
 .candidate.best {
   border-color: var(--accent);
