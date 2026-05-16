@@ -2,24 +2,20 @@ import { useState } from 'react'
 import CameraView from './CameraView.jsx'
 import Candidates from './Candidates.jsx'
 import CardDetail from './CardDetail.jsx'
-import { readCard } from '../lib/ocr.js'
-import { searchCards } from '../lib/pokeApi.js'
-import { guessLanguage } from '../lib/languages.js'
+import { scanCard } from '../lib/scan.js'
 
-// stage: camera | processing | candidates | detail | error
+// stage: camera | scanning | candidates | detail | error
 export default function ScanScreen() {
   const [stage, setStage] = useState('camera')
+  const [scanLang, setScanLang] = useState('')
   const [photo, setPhoto] = useState(null)
-  const [ocr, setOcr] = useState(null)
   const [candidates, setCandidates] = useState([])
   const [picked, setPicked] = useState(null)
-  const [progress, setProgress] = useState(0)
   const [error, setError] = useState('')
 
   function reset() {
     setStage('camera')
     setPhoto(null)
-    setOcr(null)
     setCandidates([])
     setPicked(null)
     setError('')
@@ -27,46 +23,40 @@ export default function ScanScreen() {
 
   async function handleCapture(dataUrl) {
     setPhoto(dataUrl)
-    setStage('processing')
-    setProgress(0.05)
+    setStage('scanning')
+    setError('')
     try {
-      const read = await readCard(dataUrl, setProgress)
-      read.language = guessLanguage(read.rawText)
-      setOcr(read)
-      if (!read.name && !read.number) {
-        setError(
-          'No se ha podido leer la carta. Prueba con más luz, sin reflejos y la carta bien encuadrada.'
-        )
+      const found = await scanCard(dataUrl, scanLang)
+      if (!found.length) {
+        setError('No se ha reconocido la carta. Prueba con mejor luz, la carta plana y bien encuadrada.')
         setStage('error')
         return
       }
-      const found = await searchCards({
-        name: read.name,
-        number: read.number,
-        setTotal: read.setTotal,
-      })
       setCandidates(found)
       setStage('candidates')
     } catch (e) {
-      setError(e.message || 'Error procesando la carta.')
+      setError(e.message || 'Error al reconocer la carta.')
       setStage('error')
     }
   }
 
-  if (stage === 'camera') return <CameraView onCapture={handleCapture} />
+  if (stage === 'camera') {
+    return (
+      <CameraView
+        scanLang={scanLang}
+        onScanLang={setScanLang}
+        onCapture={handleCapture}
+      />
+    )
+  }
 
-  if (stage === 'processing') {
+  if (stage === 'scanning') {
     return (
       <div className="screen processing">
         {photo && <img src={photo} alt="" className="scan-thumb big" />}
         <div className="spinner" />
-        <p>Identificando la carta…</p>
-        <div className="progress">
-          <div
-            className="progress-bar"
-            style={{ width: `${Math.round(progress * 100)}%` }}
-          />
-        </div>
+        <p>Reconociendo la carta…</p>
+        <p className="muted">Comparando con la base de datos de PriceCharting</p>
       </div>
     )
   }
@@ -86,7 +76,6 @@ export default function ScanScreen() {
     return (
       <Candidates
         photo={photo}
-        ocr={ocr}
         candidates={candidates}
         onRetry={reset}
         onPick={(card, language) => {
@@ -103,7 +92,6 @@ export default function ScanScreen() {
         card={picked.card}
         language={picked.language}
         onBack={() => setStage('candidates')}
-        onSaved={() => {}}
       />
     )
   }

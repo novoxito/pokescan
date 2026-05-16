@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { LANGUAGES } from '../lib/languages.js'
+import { LANGUAGES, languageFromSet } from '../lib/languages.js'
 
-// Lista de cartas candidatas + selección de idioma (importante: el precio y la
-// ficha dependen del idioma de la copia física que tiene el usuario).
-export default function Candidates({ photo, ocr, candidates, onPick, onRetry }) {
-  const [language, setLanguage] = useState(ocr?.language || 'EN')
+// Lista de cartas candidatas devueltas por el reconocimiento de imagen,
+// ordenadas por confianza. El usuario elige la suya y el idioma de su copia.
+export default function Candidates({ photo, candidates, onPick, onRetry }) {
+  const [language, setLanguage] = useState(
+    languageFromSet(candidates[0]?.set)
+  )
 
   return (
     <div className="screen">
@@ -12,9 +14,9 @@ export default function Candidates({ photo, ocr, candidates, onPick, onRetry }) 
         {photo && <img src={photo} alt="" className="scan-thumb" />}
         <div>
           <p className="scan-read">
-            Texto leído:{' '}
-            <strong>{ocr?.name || '¿?'}</strong>
-            {ocr?.number ? ` · nº ${ocr.number}` : ''}
+            {candidates.length} coincidencia
+            {candidates.length === 1 ? '' : 's'} encontrada
+            {candidates.length === 1 ? '' : 's'}
           </p>
           <button className="link" onClick={onRetry}>
             Volver a escanear
@@ -39,33 +41,32 @@ export default function Candidates({ photo, ocr, candidates, onPick, onRetry }) 
       </section>
 
       <section>
-        <h3>
-          {candidates.length
-            ? 'Elige tu carta'
-            : 'Sin coincidencias — vuelve a escanear'}
-        </h3>
+        <h3>Elige tu carta</h3>
         <div className="candidate-list">
-          {candidates.map((c) => (
+          {candidates.map((c, i) => (
             <button
-              key={c.id}
-              className="candidate"
+              key={c.productId + i}
+              className={`candidate ${i === 0 ? 'best' : ''}`}
               onClick={() => onPick(c, language)}
             >
-              {c.images?.small ? (
-                <img src={c.images.small} alt={c.name} loading="lazy" />
+              {c.image ? (
+                <img src={c.image} alt={c.name} loading="lazy" />
               ) : (
                 <div className="candidate-noimg">Sin imagen</div>
               )}
               <div className="candidate-meta">
                 <strong>{c.name}</strong>
-                <span>
-                  {c.setName} · {c.number}
-                  {c.setTotal ? `/${c.setTotal}` : ''}
-                </span>
-                <span className="muted">
-                  {c.rarity || '—'}
-                  {c.releaseDate ? ` · ${c.releaseDate.slice(0, 4)}` : ''}
-                </span>
+                <span className="muted">{c.set}</span>
+                {c.confidence != null && (
+                  <span
+                    className={`match ${
+                      c.confidence >= 55 ? 'ok' : 'low'
+                    }`}
+                  >
+                    {i === 0 ? 'Mejor coincidencia · ' : ''}
+                    {c.confidence}% de parecido
+                  </span>
+                )}
               </div>
             </button>
           ))}

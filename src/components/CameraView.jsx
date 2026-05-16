@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { SCAN_LANGUAGES } from '../lib/languages.js'
+import { resizeDataUrl, fileToResizedDataUrl } from '../lib/image.js'
 
-// Captura una foto de la carta: cámara en vivo si se puede, si no, subir archivo.
-export default function CameraView({ onCapture }) {
+// Captura una foto de la carta (cámara en vivo o subir archivo) y elige el
+// idioma de búsqueda. Devuelve la imagen ya redimensionada para el reconocimiento.
+export default function CameraView({ scanLang, onScanLang, onCapture }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const fileRef = useRef(null)
@@ -45,26 +48,37 @@ export default function CameraView({ onCapture }) {
     }
   }, [])
 
-  function capture() {
+  async function capture() {
     const v = videoRef.current
     if (!v || !v.videoWidth) return
     const canvas = document.createElement('canvas')
     canvas.width = v.videoWidth
     canvas.height = v.videoHeight
     canvas.getContext('2d').drawImage(v, 0, 0)
-    onCapture(canvas.toDataURL('image/jpeg', 0.95))
+    const resized = await resizeDataUrl(canvas.toDataURL('image/jpeg', 0.95))
+    onCapture(resized)
   }
 
-  function onFile(e) {
+  async function onFile(e) {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => onCapture(reader.result)
-    reader.readAsDataURL(file)
+    onCapture(await fileToResizedDataUrl(file))
   }
 
   return (
     <div className="camera">
+      <div className="seg">
+        {SCAN_LANGUAGES.map((l) => (
+          <button
+            key={l.code}
+            className={scanLang === l.code ? 'active' : ''}
+            onClick={() => onScanLang(l.code)}
+          >
+            {l.label}
+          </button>
+        ))}
+      </div>
+
       <div className="camera-stage">
         {!error && (
           <video ref={videoRef} playsInline muted className="camera-video" />

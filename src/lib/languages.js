@@ -1,4 +1,11 @@
-// Idiomas en los que se imprimen las cartas Pokémon.
+// Idiomas de búsqueda que admite el reconocimiento de PriceCharting.
+export const SCAN_LANGUAGES = [
+  { code: '', label: 'Todos' },
+  { code: 'english', label: 'Inglés' },
+  { code: 'japanese', label: 'Japonés' },
+]
+
+// Idiomas para etiquetar tu copia física en la colección.
 export const LANGUAGES = [
   { code: 'EN', label: 'Inglés', flag: '🇬🇧' },
   { code: 'ES', label: 'Español', flag: '🇪🇸' },
@@ -16,16 +23,7 @@ export function languageLabel(code) {
   return l ? `${l.flag} ${l.label}` : code
 }
 
-// Pista de idioma a partir del texto OCR (heurística sencilla).
-export function guessLanguage(text) {
-  const t = (text || '').toLowerCase()
-  if (/[぀-ヿ一-鿿]/.test(t)) return 'JP'
-  if (/[가-힯]/.test(t)) return 'KO'
-  if (/punto de vida|puntos de vida|etapa|fase|debilidad|resistencia/.test(t))
-    return 'ES'
-  if (/points de vie|faiblesse|résistance|niveau/.test(t)) return 'FR'
-  if (/kraftpunkte|schwäche|resistenz/.test(t)) return 'DE'
-  if (/punti vita|debolezza|resistenza/.test(t)) return 'IT'
-  if (/weakness|resistance|retreat|stage|basic/.test(t)) return 'EN'
-  return 'EN'
+// Sugiere el idioma de la copia a partir del set detectado por PriceCharting.
+export function languageFromSet(setName = '') {
+  return /japanese/i.test(setName) ? 'JP' : 'EN'
 }
