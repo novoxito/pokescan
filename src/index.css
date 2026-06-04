@@ -586,6 +586,20 @@ body {
   color: var(--text);
 }
 
+/* ---------- aviso para idiomas sin agregador (KO/ZH) ---------- */
+.note-asian {
+  background: rgba(59, 108, 255, 0.1);
+  border-left: 3px solid var(--accent-2);
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.note-asian strong {
+  color: var(--text);
+}
+
 /* ---------- ordenar colección ---------- */
 .sort-row {
   display: flex;

@@ -137,6 +137,14 @@ export default function CardDetail({ card, language, onBack }) {
             </div>
           )}
 
+          {(language === 'KO' || language === 'ZH') && (
+            <p className="muted note-asian">
+              No hay agregador gratuito de precios para coreano ni chino.
+              Pulsa <strong>Ver en eBay</strong> para ver listings reales en
+              tu idioma — eBay es la fuente más fiable para esos mercados.
+            </p>
+          )}
+
           <div className="links-row">
             {prices.url && (
               <a
@@ -155,6 +163,14 @@ export default function CardDetail({ card, language, onBack }) {
               rel="noreferrer"
             >
               Ver en Cardmarket ↗
+            </a>
+            <a
+              className="link"
+              href={ebaySearchUrl(card.name, language)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Ver en eBay ↗
             </a>
           </div>
 
@@ -226,6 +242,35 @@ const CM_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT']
 
 // IDs de idioma usados por Cardmarket en sus URLs.
 const CM_URL_LANG = { EN: 1, FR: 2, DE: 3, ES: 4, IT: 5, ZH: 6, JP: 7, PT: 8, KO: 10 }
+
+// Palabra clave de idioma a añadir a búsquedas externas (eBay).
+const LANG_KEYWORD = {
+  ES: 'spanish',
+  JP: 'japanese',
+  KO: 'korean',
+  ZH: 'chinese',
+  FR: 'french',
+  DE: 'german',
+  IT: 'italian',
+  PT: 'portuguese',
+}
+
+// URL de búsqueda en eBay, categoría Pokémon TCG, idioma como keyword.
+function ebaySearchUrl(cardName = '', language = '') {
+  const clean = cardName
+    .replace(/\s*#.*$/, '')
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const langKw = LANG_KEYWORD[language] || ''
+  const q = [clean, langKw, 'pokemon'].filter(Boolean).join(' ')
+  const params = new URLSearchParams({
+    _nkw: q,
+    _sacat: '183454', // Pokémon Individual Trading Cards
+    _sop: '12', // best match
+  })
+  return `https://www.ebay.com/sch/i.html?${params}`
+}
 
 // URL de búsqueda en Cardmarket ya filtrada por idioma del usuario y NM.
 function cardmarketSearchUrl(cardName = '', language = '', productId = null) {
