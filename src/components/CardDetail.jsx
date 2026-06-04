@@ -137,11 +137,26 @@ export default function CardDetail({ card, language, onBack }) {
             </div>
           )}
 
-          {prices.url && (
-            <a className="link" href={prices.url} target="_blank" rel="noreferrer">
-              Ver en PriceCharting ↗
+          <div className="links-row">
+            {prices.url && (
+              <a
+                className="link"
+                href={prices.url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Ver en PriceCharting ↗
+              </a>
+            )}
+            <a
+              className="link"
+              href={cardmarketSearchUrl(card.name, language, cm?.cardmarket_id)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Ver en Cardmarket ↗
             </a>
-          )}
+          </div>
 
           {analysis && (
             <section className="grading">
@@ -208,6 +223,25 @@ export default function CardDetail({ card, language, onBack }) {
 // "más bajo NM" como referencia europea.
 const CM_LANG_LABELS = { ES: 'Español', EN: 'Inglés', DE: 'Alemán', FR: 'Francés', IT: 'Italiano' }
 const CM_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT']
+
+// IDs de idioma usados por Cardmarket en sus URLs.
+const CM_URL_LANG = { EN: 1, FR: 2, DE: 3, ES: 4, IT: 5, ZH: 6, JP: 7, PT: 8, KO: 10 }
+
+// URL de búsqueda en Cardmarket ya filtrada por idioma del usuario y NM.
+function cardmarketSearchUrl(cardName = '', language = '', productId = null) {
+  // Limpia el "#4 Pokemon Base Set 2" del título de PriceCharting.
+  const clean = cardName
+    .replace(/\s*#.*$/, '')
+    .replace(/\[[^\]]*\]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const params = new URLSearchParams({ searchString: clean })
+  const langId = CM_URL_LANG[language]
+  if (langId) params.set('idLanguage', String(langId))
+  params.set('minCondition', '2') // NM
+  if (productId) params.set('idProduct', String(productId))
+  return `https://www.cardmarket.com/en/Pokemon/Products/Search?${params}`
+}
 
 function CardmarketBlock({ cm, language, fmt }) {
   const langKey = CM_LANGS.includes(language) ? language : null
