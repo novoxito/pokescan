@@ -128,44 +128,64 @@ function setTokens(s = '') {
   )
 }
 
+// Precios de Cardmarket (mercado europeo, EUR) por idioma — vía pokemon-tcg-api
+// en RapidAPI. Sirve `lowest_near_mint_{ES,DE,FR,IT}` y medianas de eBay graded.
+const RAPIDAPI_HOST = 'pokemon-tcg-api.p.rapidapi.com'
+
+async function searchPokeApiTcg(pokemon, number) {
+  const key = process.env.RAPIDAPI_KEY
+  if (!key || !pokemon) return []
+  const params = new URLSearchParams({ name: pokemon })
+  if (number) params.set('card_number', number)
+  try {
+    const res = await fetch(`https://${RAPIDAPI_HOST}/cards?${params}`, {
+      headers: {
+        'x-rapidapi-key': key,
+        'x-rapidapi-host': RAPIDAPI_HOST,
+      },
+    })
+    if (!res.ok) return []
+    return (await res.json()).data || []
+  } catch {
+    return []
+  }
+}
+
 /**
- * Precio de Cardmarket (mercado europeo, EUR) vía la API pública de Pokémon TCG.
- * Cardmarket no tiene API gratuita y bloquea el scraping directo (403), pero
- * la API de Pokémon TCG expone sus precios de Cardmarket.
+ * Precio de Cardmarket por idioma para una carta concreta.
+ * Si no hay clave de RapidAPI configurada, devuelve null y la app sigue.
  */
 export async function getCardmarketPrice(pokemon, number, setHint = '') {
-  if (!pokemon) return null
-  const q =
-    `name:"${pokemon.replace(/["\\]/g, '')}*"` +
-    (number ? ` number:"${number}"` : '')
-  let cards = []
-  try {
-    const res = await fetch(
-      `https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=20`
-    )
-    if (!res.ok) return null
-    cards = (await res.json()).data || []
-  } catch {
-    return null
-  }
+  const cards = await searchPokeApiTcg(pokemon, number)
+  if (!cards.length) return null
 
   const hintTokens = setTokens(setHint)
   let best = null
   let bestScore = -1
   for (const c of cards) {
-    const p = c.cardmarket?.prices
-    if (!p || !(p.trendPrice || p.averageSellPrice)) continue
-    const tokens = setTokens(c.set?.name)
+    const cm = c.prices?.cardmarket
+    if (!cm) continue
+    const tokens = setTokens(c.episode?.name || '')
     let overlap = 0
     for (const t of tokens) if (hintTokens.has(t)) overlap++
     if (overlap > bestScore) {
       bestScore = overlap
       best = {
-        trend: p.trendPrice ?? p.averageSellPrice ?? null,
-        avg30: p.avg30 ?? null,
-        low: p.lowPrice ?? null,
-        set: c.set?.name || '',
-        url: c.cardmarket?.url || '',
+        currency: cm.currency || 'EUR',
+        lowest: cm.lowest_near_mint ?? null,
+        prices_by_lang: {
+          ES: cm.lowest_near_mint_ES ?? null,
+          EN: cm.lowest_near_mint_EU_only ?? null, // proxy razonable para EN-EU
+          DE: cm.lowest_near_mint_DE ?? null,
+          FR: cm.lowest_near_mint_FR ?? null,
+          IT: cm.lowest_near_mint_IT ?? null,
+        },
+        avg30: cm['30d_average'] ?? null,
+        avg7: cm['7d_average'] ?? null,
+        available: cm.available_items ?? null,
+        ebay_graded: c.prices?.ebay?.graded ?? null,
+        set: c.episode?.name || '',
+        cardmarket_id: c.cardmarket_id || null,
       }
     }
   }

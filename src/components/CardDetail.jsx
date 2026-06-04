@@ -55,6 +55,11 @@ export default function CardDetail({ card, language, onBack }) {
       : null
 
   function save() {
+    const langKey = ['ES', 'EN', 'DE', 'FR', 'IT'].includes(language)
+      ? language
+      : null
+    const cmLang = langKey ? cm?.prices_by_lang?.[langKey] ?? null : null
+    const cmEur = cmLang ?? cm?.lowest ?? null
     addToCollection({
       cardId: card.productId,
       name: card.name,
@@ -64,7 +69,7 @@ export default function CardDetail({ card, language, onBack }) {
       language,
       rawPriceUsd: rawUsd,
       psa10PriceUsd: psa10Usd,
-      cardmarketEur: cm?.trend ?? null,
+      cardmarketEur: cmEur,
     })
     setSaved(true)
   }
@@ -122,14 +127,7 @@ export default function CardDetail({ card, language, onBack }) {
 
           <h3 className="price-heading">Cardmarket · mercado europeo</h3>
           {cm ? (
-            <div className="price-card">
-              <span className="price-label">Precio tendencia</span>
-              <span className="price-value">{fmt(cm.trend, 'EUR')}</span>
-              <span className="muted">
-                {cm.avg30 != null ? `Media 30d ${fmt(cm.avg30, 'EUR')}` : ''}
-                {cm.low != null ? ` · Desde ${fmt(cm.low, 'EUR')}` : ''}
-              </span>
-            </div>
+            <CardmarketBlock cm={cm} language={language} fmt={fmt} />
           ) : (
             <div className="price-card">
               <span className="price-value small">No disponible</span>
@@ -139,18 +137,11 @@ export default function CardDetail({ card, language, onBack }) {
             </div>
           )}
 
-          <div className="links-row">
-            {prices.url && (
-              <a className="link" href={prices.url} target="_blank" rel="noreferrer">
-                PriceCharting ↗
-              </a>
-            )}
-            {cm?.url && (
-              <a className="link" href={cm.url} target="_blank" rel="noreferrer">
-                Cardmarket ↗
-              </a>
-            )}
-          </div>
+          {prices.url && (
+            <a className="link" href={prices.url} target="_blank" rel="noreferrer">
+              Ver en PriceCharting ↗
+            </a>
+          )}
 
           {analysis && (
             <section className="grading">
@@ -208,6 +199,62 @@ export default function CardDetail({ card, language, onBack }) {
       <button className="btn btn-primary" onClick={save} disabled={saved}>
         {saved ? 'Añadida a tu colección ✓' : 'Añadir a mi colección'}
       </button>
+    </div>
+  )
+}
+
+// Bloque de precios de Cardmarket por idioma. Resalta el idioma de la copia
+// del usuario (ES/EN/DE/FR/IT); si no hay datos en ese idioma, muestra el
+// "más bajo NM" como referencia europea.
+const CM_LANG_LABELS = { ES: 'Español', EN: 'Inglés', DE: 'Alemán', FR: 'Francés', IT: 'Italiano' }
+const CM_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT']
+
+function CardmarketBlock({ cm, language, fmt }) {
+  const langKey = CM_LANGS.includes(language) ? language : null
+  const langPrice = langKey ? cm.prices_by_lang?.[langKey] ?? null : null
+  const others = CM_LANGS.filter((k) => k !== langKey)
+
+  return (
+    <div className="price-card">
+      <span className="price-label">
+        {langKey
+          ? `Cardmarket · ${CM_LANG_LABELS[langKey]} (NM)`
+          : 'Cardmarket · más bajo NM'}
+      </span>
+      {langKey && langPrice != null ? (
+        <span className="price-value">{fmt(langPrice, 'EUR')}</span>
+      ) : langKey ? (
+        <>
+          <span className="price-value">{fmt(cm.lowest, 'EUR')}</span>
+          <span className="muted">
+            Sin precio específico en {CM_LANG_LABELS[langKey]} — se muestra el
+            más bajo NM disponible.
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="price-value">{fmt(cm.lowest, 'EUR')}</span>
+          <span className="muted">
+            Cardmarket no cubre tu idioma. Se muestra el más bajo NM global.
+          </span>
+        </>
+      )}
+
+      <div className="cm-langs">
+        {others.map((k) =>
+          cm.prices_by_lang?.[k] != null ? (
+            <span key={k} className="cm-pill">
+              {k} {fmt(cm.prices_by_lang[k], 'EUR')}
+            </span>
+          ) : null
+        )}
+      </div>
+
+      <span className="muted">
+        {cm.avg30 != null ? `Media 30d ${fmt(cm.avg30, 'EUR')}` : ''}
+        {cm.avg7 != null ? ` · 7d ${fmt(cm.avg7, 'EUR')}` : ''}
+        {cm.available != null ? ` · ${cm.available} a la venta` : ''}
+      </span>
     </div>
   )
 }

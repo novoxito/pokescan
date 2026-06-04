@@ -2,7 +2,20 @@
 // En producción, estas mismas operaciones las sirven las funciones
 // serverless de Vercel en api/scan.js y api/price.js.
 import http from 'node:http'
+import { readFileSync } from 'node:fs'
 import { searchByPhoto, getPrices } from './pricecharting.js'
+
+// Carga variables de .env.local (gitignored) para desarrollo local.
+// En Vercel, las variables ya vienen inyectadas por el entorno.
+try {
+  const txt = readFileSync(new URL('../.env.local', import.meta.url), 'utf8')
+  for (const line of txt.split('\n')) {
+    const m = line.match(/^\s*([A-Z_][A-Z0-9_]*)\s*=\s*(.*?)\s*$/)
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^"|"$/g, '')
+  }
+} catch {
+  /* sin .env.local */
+}
 
 const PORT = process.env.PORT || 8787
 
