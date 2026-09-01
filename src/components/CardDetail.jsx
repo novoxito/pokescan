@@ -6,6 +6,7 @@ import {
   DEFAULT_GRADING_COST,
 } from '../lib/grading.js'
 import { languageLabel } from '../lib/languages.js'
+import { cardmarketUrl, CM_CONDITIONS } from '../lib/cardmarket.js'
 import { addToCollection, getSettings, saveSettings } from '../lib/storage.js'
 import { useCurrency } from '../context/currency.jsx'
 
@@ -145,6 +146,8 @@ export default function CardDetail({ card, language, onBack }) {
             </p>
           )}
 
+          <CardmarketButtons name={card.name} language={language} />
+
           <div className="links-row">
             {prices.url && (
               <a
@@ -156,14 +159,6 @@ export default function CardDetail({ card, language, onBack }) {
                 Ver en PriceCharting ↗
               </a>
             )}
-            <a
-              className="link"
-              href={cardmarketSearchUrl(card.name, language, cm?.cardmarket_id)}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Ver en Cardmarket ↗
-            </a>
             <a
               className="link"
               href={ebaySearchUrl(card.name, language)}
@@ -240,9 +235,6 @@ export default function CardDetail({ card, language, onBack }) {
 const CM_LANG_LABELS = { ES: 'Español', EN: 'Inglés', DE: 'Alemán', FR: 'Francés', IT: 'Italiano' }
 const CM_LANGS = ['ES', 'EN', 'DE', 'FR', 'IT']
 
-// IDs de idioma usados por Cardmarket en sus URLs.
-const CM_URL_LANG = { EN: 1, FR: 2, DE: 3, ES: 4, IT: 5, ZH: 6, JP: 7, PT: 8, KO: 10 }
-
 // Palabra clave de idioma a añadir a búsquedas externas (eBay).
 const LANG_KEYWORD = {
   ES: 'spanish',
@@ -272,20 +264,39 @@ function ebaySearchUrl(cardName = '', language = '') {
   return `https://www.ebay.com/sch/i.html?${params}`
 }
 
-// URL de búsqueda en Cardmarket ya filtrada por idioma del usuario y NM.
-function cardmarketSearchUrl(cardName = '', language = '', productId = null) {
-  // Limpia el "#4 Pokemon Base Set 2" del título de PriceCharting.
-  const clean = cardName
-    .replace(/\s*#.*$/, '')
-    .replace(/\[[^\]]*\]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  const params = new URLSearchParams({ searchString: clean })
-  const langId = CM_URL_LANG[language]
-  if (langId) params.set('idLanguage', String(langId))
-  params.set('minCondition', '2') // NM
-  if (productId) params.set('idProduct', String(productId))
-  return `https://www.cardmarket.com/en/Pokemon/Products/Search?${params}`
+// Botonera de acceso directo a Cardmarket: la carta ya buscada, filtrada al
+// idioma de la copia y a una condición mínima. Un toque = primer precio de
+// esa condición en ese idioma.
+function CardmarketButtons({ name, language }) {
+  const lang = language || 'JP'
+  return (
+    <div className="cm-buttons">
+      <span className="price-label">
+        Cardmarket · {languageLabel(lang)} · primer precio por condición
+      </span>
+      <div className="cm-buttons-row">
+        {CM_CONDITIONS.map((c) => (
+          <a
+            key={c.code}
+            className="btn btn-cm"
+            href={cardmarketUrl({ name, language: lang, minCondition: c.min })}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {c.code}
+          </a>
+        ))}
+        <a
+          className="btn btn-cm ghost"
+          href={cardmarketUrl({ name, language: lang })}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Todas
+        </a>
+      </div>
+    </div>
+  )
 }
 
 function CardmarketBlock({ cm, language, fmt }) {
